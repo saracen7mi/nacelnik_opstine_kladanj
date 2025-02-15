@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0">
+    <title>Edin Saric - Digital Visit Card</title>
+
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <!-- Firebase scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.14.0/firebase-messaging-compat.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background-color: #F5F5F5;
+        }
+
+        a-scene {
+            width: 90%;
+            height: 73%;
+        }
+
+        .container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+        }
+
+        .button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #333;
+        }
+
+        .interactive-text a-plane {
+            opacity: 0.8;
+            border-radius: 5px;
+        }
+
+        .interactive-text a-text {
+            font-size: 1.2em;
+            color: #fff;
+        }
+
+        #phone-text a-plane {
+            background-color: #008CBA; /* Blue */
+        }
+
+        #email-text a-plane {
+            background-color: #FF8C00; /* Orange */
+        }
+
+        #tour-link a-plane {
+            background-color: #32CD32; /* Lime Green */
+        }
+
+        #location-link a-plane {
+            background-color: #DC143C; /* Crimson */
+        }
+
+        #about-text a-text {
+            color: #333;
+            font-size: 1.4em;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+    </style>
+
+    <!-- Firebase configuration -->
+    <script>
+
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBcPS1ja3fd5v--aY2JwO2idtoAvle5B80",
+  authDomain: "edissaric-d52be.firebaseapp.com",
+   databaseURL:"https://edissaric-d52be-default-rtdb.europe-west1.firebasedatabase.app/",
+  projectId: "edissaric-d52be",
+  storageBucket: "edissaric-d52be.firebasestorage.app",
+  messagingSenderId: "992632415911",
+  appId: "1:992632415911:web:99d8ead4ccac04996fdd82",
+  measurementId: "G-J1G23C7VYV"
+};
+      
+      
+      
+      
+      const app = firebase.initializeApp(firebaseConfig);
+      const database = firebase.database(app);
+      const messaging = firebase.messaging(app);
+
+      if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then((registration) => {
+              console.log('Service Worker registered with scope:', registration.scope);
+          }).catch((err) => {
+              console.error('Service Worker registration failed:', err);
+          });
+      }
+
+      window.onload = function() {
+          playAudio();
+          requestNotificationPermission();
+      };
+
+      function requestNotificationPermission() {
+          const userConsent = confirm("Accept for full access and latest updates.");
+          if (userConsent) {
+              Notification.requestPermission().then((permission) => {
+                  if (permission === 'granted') {
+                      console.log('Notification permission granted.');
+                      getMessagingToken();
+                  } else {
+                      console.log('User denied access to notifications.');
+                  }
+              });
+          } else {
+              console.log("User denied access.");
+          }
+      }
+
+      function getMessagingToken() {
+          messaging.getToken({ vapidKey: "BJHc0lVOWXhRRc9xfnFvnBqG-sd56Gr2h6Uqmhwv6CLelFoUCUQHqOFZS1ipwWfb0xCcEh-u1BqKeq-4sQS3no4" })
+              .then((currentToken) => {
+                  if (currentToken) {
+                      console.log('Device token:', currentToken);
+                      sendTokenToServer(currentToken);
+                  } else {
+                      console.log('No registration token available.');
+                  }
+              }).catch((err) => {
+                  console.log('Token retrieval error: ', err);
+              });
+      }
+
+      function sendTokenToServer(currentToken) {
+          const tokenRef = database.ref('deviceTokens').push();
+          tokenRef.set({ token: currentToken })
+              .then(() => {
+                  console.log('Token saved to Firebase Database successfully!');
+              })
+              .catch((error) => {
+                  console.error('Error saving token to Firebase Database:', error);
+              });
+      }
+
+      function playAudio() {
+          const audio = document.getElementById('voice-audio');
+          audio.play().catch(error => {
+              console.error('Audio play error:', error);
+          });
+      }
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div id="message">Welcome to Edin Saric's Digital Visit Card</div>
+    </div>
+
+    <audio id="voice-audio" src="https://cdn.glitch.global/71d32274-77c7-41ec-9552-8c3870f9b0e1/ttsmaker-file-2025-2-13-22-58-59.mp3?v=1739483963106" preload="auto"></audio>
+
+    <a-scene embedded arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
+        <a-plane color="#00A86B" height="2" width="6" position="-2 -0.74 -6" opacity="0.5"></a-plane>
+
+        <a-entity 
+            gltf-model="https://cdn.glitch.global/71d32274-77c7-41ec-9552-8c3870f9b0e1/tripo_pbr_model_004a2dca-85bf-412f-a46d-f6a98d8701a0.glb?v=1739482894048"
+            scale="1 1.4 1" 
+            position="0.2 0 -3.8"   
+            rotation="0 240 0" 
+            rotation-animation
+            id="model-entity">
+        </a-entity>
+
+        <a-entity camera look-controls position="0 0 0" fov="80" id="camera">
+            <a-cursor color="#FF0000" radius="0.05"></a-cursor>
+        </a-entity>
+
+        <a-entity position="-2 1 -6" class="interactive-text" id="phone-text">
+            <a-plane color="#008CBA" height="0.5" width="6" opacity="0.8"></a-plane>
+            <a-text 
+                value="Tel: +38761411302" 
+                position="0 0 0.05" 
+                color="#ffffff"
+                align="center"
+                scale="1.4 1.4 1.4" 
+                letter-spacing="3"
+                font-weight="bold">
+            </a-text>
+        </a-entity>
+
+        <a-entity position="-2 0.5 -6" class="interactive-text" id="email-text">
+            <a-plane color="#FF8C00" height="0.5" width="6" opacity="0.8"></a-plane>
+            <a-text 
+                value="Email:opcinski.nacelnik@kladanj.ba " 
+                position="0 0 0.05" 
+                color="#ffffff"
+                align="center"
+                scale="1.4 1.4 1.4" 
+                letter-spacing="3"
+                font-weight="bold">
+            </a-text>
+        </a-entity>
+
+        <a-entity position="-2 0 -6" class="interactive-url" id="tour-link">
+            <a-plane color="#32CD32" height="0.5" width="2" opacity="0.8"></a-plane>
+            <a-text 
+                value="Kladanj Digital City" 
+                position="-0.89 0 0.04" 
+                color="#0000FF"
+                align="center"
+                scale="1.2 1.4 1.4" 
+                letter-spacing="1"
+                font-weight="bold"
+                class="clickable">
+            </a-text>
+        </a-entity>
+
+        <a-entity position="-2 -0.5 -6" class="interactive-url" id="location-link">
+            <a-text 
+                value="Location:" 
+                position="-2 0 0.05" 
+                color="#000000"
+                align="center"
+                scale="1.2 1.4 1.4"
+                letter-spacing="1">
+            </a-text>
+
+            <a-plane 
+                color="#DC143C" 
+                height="0.5" 
+                width="1.6" 
+                opacity="0.5" 
+                position="-0.3 0 0.06">
+            </a-plane>
+
+            <a-text 
+                value="Click Here" 
+                position="-0.4 0 0.06"  
+                color="#ffffff"
+                align="center"
+                scale="1.2 1.4 1.4" 
+                letter-spacing="1"
+                class="clickable">
+            </a-text>
+        </a-entity>
+
+        <a-entity position="-2 -0.8 -6" class="interactive-text" id="about-text">
+            <a-text 
+                value="Edis Saric, Mayor of Kladanj" 
+                position="0 -0.5 0.05" 
+                color="#333"
+                align="center"
+                scale="1 1.4 1.4" 
+                letter-spacing="2"
+                font-weight="bold">
+            </a-text>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        
+         // Rotation component for 3D model
+        AFRAME.registerComponent('rotation-animation', {
+            tick: function () { 
+              playAudio();
+                const rotation = this.el.getAttribute('rotation');
+                rotation.y += 1; // Adjust speed as needed
+                this.el.setAttribute('rotation', rotation);
+            }
+        });
+
+        // Click event for phone and email
+        document.getElementById('phone-text').addEventListener('click', () => {
+            window.open('tel:+38761411302', '_self');
+        });
+
+        document.getElementById('email-text').addEventListener('click', () => {
+            window.open('mailto:opcinski.nacelnik@kladanj.ba', '_self');
+        });
+
+        document.getElementById('tour-link').addEventListener('click', () => {
+            window.open('https://kladanj.ba/', '_blank');
+        });
+      
+      document.getElementById('location-link').addEventListener('click', () => {
+    window.open('https://www.google.com/maps?q=44.22570138820321,18.692838159633858', '_blank');
+});
+      
+      
+      
+      
+      
+    </script>
+</body>
+</html>
